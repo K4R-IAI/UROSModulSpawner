@@ -19,5 +19,16 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
-	]
+	],
+  "Plugins": [
+    {
+      "Name": "URoboSim",
+      "Enabled": true
+    },
+    {
+      "Name": "UROSWorldControll",
+      "Enabled": true
+    }
+
+  ]
 }

@@ -38,6 +38,9 @@ public class UROSModulSpawner : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"UROSControl",
+				"URoboSim"
+
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

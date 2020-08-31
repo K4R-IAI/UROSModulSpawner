@@ -39,7 +39,9 @@ public class UROSModulSpawner : ModuleRules
 				"Slate",
 				"SlateCore",
 				"UROSControl",
-				"URoboSim"
+                "URoboSim",
+                "XmlParser",
+
 
 				// ... add private dependencies that you statically link with here ...	
 			}

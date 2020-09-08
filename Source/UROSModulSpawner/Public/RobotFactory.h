@@ -23,6 +23,18 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	
-    void SpawnRobot(FString* InMessage,UWorld World);
+struct FSpawnRobotParams
+{
+//    FString Id;
+//    FString Name;
+    FString DataAssetToSpawn;
+//    FString ParentId;
+    UWorld* World;
+//    FVector Location;
+//    FRotator Rotator;
+
+};
+    void SpawnRobot(FString InMessage,UWorld* World);
+    bool SpawnRobotFromAsset(const FSpawnRobotParams Params);
+
 };

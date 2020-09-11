@@ -108,7 +108,7 @@ void FRuntimeSDFParser::ParseSDF()
     }
 }
 
-
+/**/
 
 
 // Parse <model> node
@@ -119,19 +119,6 @@ void FRuntimeSDFParser::ParseModel(const FXmlNode* InNode)
 
   // Get "name" from node attribute
   const FString Name = InNode->GetAttribute(TEXT("name"));
-
-  if(FPaths::DirectoryExists(Name))
-  {
-      UObject* OutObject = NewObject<UObject>();
-      FindObject<USDFDataAsset>(OutObject,*Name);
-      this->DataAsset= Cast<USDFDataAsset>(OutObject);
-      if(DataAsset)
-      {
-          //Cast was successfull we have an SDFDataAsset to work with
-     }
-  }
-
-
 
   if(!Name.IsEmpty())
     {
@@ -171,9 +158,51 @@ void FRuntimeSDFParser::ParseModel(const FXmlNode* InNode)
                  *FString(__FUNCTION__), __LINE__, *ChildNode->GetTag());
           continue;
         }
+
     }
 
-  // Add model to the data asset
+  // Add model to the data asset+
+//  check(NewModel)
+//  for(int i=0;i<NewModel->Links.Num();i++)
+//  {
+
+//      if(NewModel->Links.IsValidIndex(i))
+//      {
+//          UE_LOG(LogTemp, Log, TEXT("[%s]: %d Link %s has %d Visuals and %d collisions"),*FString(__FUNCTION__),i, *(NewModel->Links[i]->Name),NewModel->Links[i]->Visuals.Num(),NewModel->Links[i]->Collisions.Num());
+//          //print for visuals
+//          UE_LOG(LogTemp, Log, TEXT("[%s]: Link Name: %s"),*FString(__FUNCTION__), *(NewModel->Links[i]->Name));
+//          for(int j=0;NewModel->Links[i]->Visuals.Num();j++)
+//          {
+//            if(NewModel->Links[i]->Visuals.IsValidIndex(j))
+//            {
+//                UE_LOG(LogTemp, Log, TEXT("[%s]: Link Name: %s Visual Name %s"),*FString(__FUNCTION__), *(NewModel->Links[i]->Name), *(NewModel->Links[i]->Visuals[j]->Name));
+//                if(NewModel->Links[i]->Visuals[j]->Geometry)
+//                {
+//                    FString Valeera= NewModel->Links[i]->Visuals[j]->Geometry->Mesh->GetPathName();
+//                    UE_LOG(LogTemp, Log, TEXT("[%s]: %d %d Links Visuals Path %s"),*FString(__FUNCTION__), i,j, *Valeera);
+
+//                }
+
+//            }
+//          }//for Visuals
+//          //print for collisions
+//          for(int z=0;z<NewModel->Links[i]->Collisions.Num();z++)
+//          {
+//              if(NewModel->Links[i]->Collisions.IsValidIndex(z))
+//              {
+//                  UE_LOG(LogTemp, Warning, TEXT("[%s]: Link Name: %s Collision Name %s"),*FString(__FUNCTION__), *(NewModel->Links[i]->Name), *(NewModel->Links[i]->Collisions[z]->Name));
+////                  if(NewModel->Links[i]->Collisions[z]->Geometry)
+////                  {
+////                      FString Valeera= NewModel->Links[i]->Collisions[z]->Geometry->Mesh->GetPathName();
+////                      UE_LOG(LogTemp, Warning, TEXT("[%s]: %d %d Links Collision Path %s"),*FString(__FUNCTION__), i,j, *Valeera);
+////                  }
+//                }
+//            }//for Collisions
+
+
+//          }
+//  }
+
   DataAsset->Models.Add(NewModel);
 }
 
@@ -199,7 +228,7 @@ void FRuntimeSDFParser::ParseLink(const FXmlNode* InNode, USDFModel*& OutModel)
       NewLink = NewObject<USDFLink>(OutModel/*, FName(TEXT("__default__"))*/);
       NewLink->Name = TEXT("__default__");
     }
-
+ UE_LOG(LogTemp, Log, TEXT("[%s]: Link Name Parsed: %s"),*FString(__FUNCTION__), *(NewLink->Name));
   // Iterate <link> child nodes
   for (const auto& ChildNode : InNode->GetChildrenNodes())
     {
@@ -217,7 +246,9 @@ void FRuntimeSDFParser::ParseLink(const FXmlNode* InNode, USDFModel*& OutModel)
         }
       else if (ChildNode->GetTag().Equals(TEXT("collision")))
         {
+          UE_LOG(LogTemp, Log, TEXT("[%s]: Befor adding collisions we have %d Collisions"),*FString(__FUNCTION__), OutModel->Links.Num());
           ParseCollision(ChildNode, NewLink);
+          UE_LOG(LogTemp, Log, TEXT("[%s]: After adding collisions we have %d Collisions"),*FString(__FUNCTION__), OutModel->Links.Num());
         }
       else if (ChildNode->GetTag().Equals(TEXT("self_collide")))
         {
@@ -236,15 +267,15 @@ void FRuntimeSDFParser::ParseLink(const FXmlNode* InNode, USDFModel*& OutModel)
     }
   if(NewLink->Collisions.Num() == 0)
     {
-//      USDFCollision* Collision = CreateVirtualCollision(NewLink);
-//      if(Collision)
-//        {
-//          NewLink->Collisions.Add(Collision);
-//        }
-//      else
-//        {
-//          UE_LOG(LogTemp, Error, TEXT("Creation of Virtual Link % failed"), *CurrentLinkName);
-//        }
+      USDFCollision* Collision = CreateVirtualCollision(NewLink);
+      if(Collision)
+        {
+          NewLink->Collisions.Add(Collision);
+        }
+      else
+        {
+          UE_LOG(LogTemp, Error, TEXT("Creation of Virtual Link %s failed"), *CurrentLinkName);
+        }
     }
 
   // Add link to the data asset
@@ -258,42 +289,20 @@ void FRuntimeSDFParser::ParseLink(const FXmlNode* InNode, USDFModel*& OutModel)
 
 
 
-//USDFCollision* FRuntimeSDFParser::CreateVirtualCollision(USDFLink* OutLink)
-//{
-//  USDFCollision* NewCollision = NewObject<USDFCollision>(OutLink, FName(*CurrentLinkName));
-//  NewCollision->Name = CurrentLinkName;
-//  NewCollision->Pose = FTransform();
-//  NewCollision->Geometry = NewObject<USDFGeometry>(NewCollision);
-//  NewCollision->Geometry->Type = ESDFGeometryType::Box;
-//  NewCollision->Geometry->Size = FVector(0.5f, 0.5f, 0.5f);
-//  //NewCollision->Geometry->Mesh = CreateMesh(ESDFType::Collision, ESDFGeometryType::Box, CurrentLinkName, RStaticMeshUtils::GetGeometryParameter(NewCollision->Geometry));
-//  return NewCollision;
-//}
-
-//During Runtime we wont create a new Mesh but load it. Maybe we need to rename this
-UStaticMesh* FRuntimeSDFParser::LoadMesh(ESDFType InType, FString InName)
+USDFCollision* FRuntimeSDFParser::CreateVirtualCollision(USDFLink* OutLink)
 {
-  // FString Path = "";
-  FName MeshName = GenerateMeshName(InType, InName);
-  UObject* OutObject = NewObject<UObject>();
-  FindObject<UStaticMesh>(OutObject,*MeshName.ToString());
-  UStaticMesh* Mesh= Cast<UStaticMesh>(OutObject); //=FAssetModifier::LoadMesh(Params.Name, Params.StartDir)/*load correct Mesh*/;
-  return Mesh;
+    UE_LOG(LogTemp, Warning, TEXT("[%s] Creating Virtual Collision..."),*FString(__FUNCTION__));
+  USDFCollision* NewCollision = NewObject<USDFCollision>(OutLink, FName(*CurrentLinkName));
+  NewCollision->Name = CurrentLinkName;
+  NewCollision->Pose = FTransform();
+  NewCollision->Geometry = NewObject<USDFGeometry>(NewCollision);
+  NewCollision->Geometry->Type = ESDFGeometryType::Box;
+  NewCollision->Geometry->Size = FVector(0.5f, 0.5f, 0.5f);
+  //NewCollision->Geometry->Mesh = CreateMesh(ESDFType::Collision, ESDFGeometryType::Box, CurrentLinkName, RStaticMeshUtils::GetGeometryParameter(NewCollision->Geometry)); old
+  NewCollision->Geometry->Mesh = LoadMesh(ESDFType::Collision,CurrentLinkName);
+  return NewCollision;
 }
 
-FName FRuntimeSDFParser::GenerateMeshName(ESDFType InType, FString InName)
-{
-  FName MeshName;
-  if (InType == ESDFType::Collision)
-    {
-      MeshName = FName(*(TEXT("SM_") + InName + TEXT("_C")));
-    }
-  else if (InType == ESDFType::Visual)
-    {
-      MeshName = FName(*(TEXT("SM_") + InName + TEXT("_V")));
-    }
-  return MeshName;
-}
 
 
 // Parse <visual> node
@@ -349,6 +358,7 @@ void FRuntimeSDFParser::ParseVisual(const FXmlNode* InNode, USDFLink*& OutLink)
 // Parse <collision> node
 void FRuntimeSDFParser::ParseCollision(const FXmlNode* InNode, USDFLink*& OutLink)
 {
+
   // Ptr to the new collision
   USDFCollision* NewCollision = nullptr;
 
@@ -366,7 +376,7 @@ void FRuntimeSDFParser::ParseCollision(const FXmlNode* InNode, USDFLink*& OutLin
       NewCollision = NewObject<USDFCollision>(OutLink/*, FName(TEXT("__default__"))*/);
       NewCollision->Name = TEXT("__default__");
     }
-
+  UE_LOG(LogTemp, Error, TEXT("[%s] Create Collsion %s."),*FString(__FUNCTION__), *NewCollision->Name);
   // Iterate <collision> child nodes
   for (const auto& ChildNode : InNode->GetChildrenNodes())
     {
@@ -411,6 +421,25 @@ USDFDataAsset* FRuntimeSDFParser::ParseToNewDataAsset(UObject* InParent, FName I
     // Parse sdf data and fill the data asset
     ParseSDF();
 
+
+    UE_LOG(LogTemp, Warning, TEXT("[%s] Created an Runtime DataAsset"),*FString(__FUNCTION__));
+    return DataAsset;
+}
+USDFDataAsset* FRuntimeSDFParser::ParseToNewDataAsset()
+{
+    if (!bSDFLoaded)
+      {
+        return nullptr;
+      }
+
+    // Create a new SDFDataAsset
+    DataAsset = NewObject<USDFDataAsset>();
+
+    // Parse sdf data and fill the data asset
+    ParseSDF();
+
+
+    UE_LOG(LogTemp, Warning, TEXT("[%s] Created an Runtime DataAsset"),*FString(__FUNCTION__));
     return DataAsset;
 }
 
@@ -435,6 +464,79 @@ void FRuntimeSDFParser::ParseGeometryMesh(const FXmlNode *InNode, USDFGeometry *
             continue;
           }
       }
+
 }
 
+//During Runtime we wont create a new Mesh but load it. Maybe we need to rename this
+UStaticMesh* FRuntimeSDFParser::LoadMesh(ESDFType InType, FString InName)
+{
+    UStaticMesh* Mesh=nullptr;
+    // FString Path = "";
+    ESDFType Type=InType;
+    FString Name=InName;
+    if(Name.EndsWith(".fbx"))
+    {
+        int Last;
+        Name.FindLastChar('.',Last);
+        Name.RemoveAt(Last,Name.Len()-Last);
+        Name.FindLastChar('/',Last);
+        Name.RemoveAt(0,Last+1);
+    }
+    FString MeshName = GenerateMeshName(Type, Name).ToString();
+    FFileManagerGeneric Fm;
+    TArray<FString> FileLocations;
+    FString RobotName =XmlFile->GetRootNode()->FindChildNode("model")->GetAttribute("name");;
+    UE_LOG(LogTemp, Log, TEXT("[%s]: Looking for the meshes at %s"), *FString(__FUNCTION__),*MeshName);
+    Fm.FindFilesRecursive(FileLocations, *FPaths::ProjectContentDir().Append("Robots/"+RobotName), *MeshName.Append(".uasset"), true, false, true);
+    UE_LOG(LogTemp, Log, TEXT("[%s]: Looking for the meshes at %s"), *FString(__FUNCTION__),*FPaths::ProjectContentDir().Append("Robots/"+RobotName));
+
+    if (FileLocations.Num() == 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s]: Could not find the Mesh %s, Type %d"), *FString(__FUNCTION__),*MeshName,InType);
+
+        //Check if it is a simple geometry if so create and change according to values
+
+    }
+    else
+    {
+        int i=0;
+        for (FString Loc : FileLocations)
+        {
+            i++;
+            UE_LOG(LogTemp, Log, TEXT("[%s]: We found an interesting location %s"), *FString(__FUNCTION__), *Loc);
+            Loc.RemoveFromStart(FPaths::ProjectContentDir());
+            int Last;
+            Loc.FindLastChar('.', Last);
+            Loc.RemoveAt(Last, Loc.Len() - Last);
+            FString FileEnding = Loc;
+            FileEnding.FindLastChar('/',Last);
+            FileEnding.RemoveAt(0,Last+1);
+
+            FString FoundPath = "StaticMesh'/Game/" + Loc + "." + FileEnding + "'";
+            FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+            {
+                Mesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *FoundPath));
+            },TStatId(),nullptr,ENamedThreads::GameThread);
+
+            //wait for code above to complete (Spawning in GameThread)
+            FTaskGraphInterface::Get().WaitUntilTaskCompletes(Task);
+            UE_LOG(LogTemp, Log, TEXT("[%s]: %d Mesh found path is %s"), *FString(__FUNCTION__), i, *Mesh->GetPathName());
+        }
+    }
+    return Mesh;
+}
+
+FName FRuntimeSDFParser::GenerateMeshName(ESDFType InType, FString InName)
+{
+  FName MeshName;
+  if (InType == ESDFType::Collision)
+    {
+      MeshName = FName(*(TEXT("SM_") + InName + TEXT("_C")));
+    }
+  else if (InType == ESDFType::Visual)
+    {
+      MeshName = FName(*(TEXT("SM_") + InName + TEXT("_V")));
+    }
+  return MeshName;
+}
 

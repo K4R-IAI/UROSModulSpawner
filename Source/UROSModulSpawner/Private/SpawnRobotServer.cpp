@@ -2,6 +2,7 @@
 
 
 #include "SpawnRobotServer.h"
+#include "RuntimeSDFParser.h"
 //#include "SDFParser.h"
 #include "WorldControlGameInstance.h"
 #include "RobotFactory.h"
@@ -11,6 +12,8 @@
 //#include "URoboSim/Classes/SDF/SDFDataAsset.h"
 
 
+//for testing
+//#include "AssetRegistryModule.h"
 
 
 TSharedPtr<FROSBridgeSrv::SrvRequest> FROSSpawnRobotServer::FromJson(TSharedPtr<FJsonObject> JsonObject) const
@@ -37,6 +40,7 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
     RobotFactory->SpawnRobot(SpawnRobotRequest->GetName(),World);*/
 
     const FString& InFilename = SpawnRobotRequest->GetName();
+
     FXmlFile* XmlFile= new FXmlFile(InFilename,EConstructMethod::ConstructFromBuffer);
     //Root Node is Version then it should be model
     check(XmlFile->IsValid())
@@ -47,15 +51,89 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
 
     FFileManagerGeneric Fm;
     TArray<FString> FileLocations;
-    UE_LOG(LogTemp, Warning, TEXT("FindFileRecursive Params ([],%s,%s,true,false,true)"), *FPaths::ProjectContentDir().Append("Content/Robots"), *Filename);
 
     Fm.FindFilesRecursive(FileLocations, *FPaths::ProjectContentDir().Append("Robots"), *Filename, true, false, true);
+    ARobotFactory* RobotFactory = NewObject<ARobotFactory>();
 
     if (FileLocations.Num() == 0)
     {
         //Could not find DataAsset
         UE_LOG(LogTemp, Warning, TEXT("[%s]: Could not find the DataAsset. Trying with runtimeParser"), *FString(__FUNCTION__));
         //Need to Parse SDF to get infos to create runtime dataAsset --> Here we can assume Meshes are already there
+        //Try the runtime Parser
+
+        FRuntimeSDFParser* RuntimeParser = new FRuntimeSDFParser(InFilename);
+        RuntimeParser->LoadSDF(SpawnRobotRequest->GetName());
+        USDFDataAsset* ToSpawnDataAsset= RuntimeParser->ParseToNewDataAsset();
+        UE_LOG(LogTemp, Error, TEXT("[%s]: NOW WE SHOULD SPAWN THE DATA ASSET WE CREATED"), *FString(__FUNCTION__));
+
+        if(ToSpawnDataAsset)
+        {
+            //About the Data Asset prints etc
+            UE_LOG(LogTemp, Log, TEXT("[%s]: Number of Models %d"), *FString(__FUNCTION__),ToSpawnDataAsset->Models.Num());
+            for(int ModelNum=0;ModelNum<ToSpawnDataAsset->Models.Num();ModelNum++)
+            {
+                UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %d"), *FString(__FUNCTION__),ModelNum,ToSpawnDataAsset->Models[ModelNum]->Links.Num());
+                for(int LinkNum=0;LinkNum<ToSpawnDataAsset->Models[ModelNum]->Links.Num();LinkNum++)
+                {
+                    UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %s has %f Mass (from Interial)"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Inertial->Mass);
+                    UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %s has %d Visuals and %d Collisions "),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.Num(),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Collisions.Num());
+                    for(int VisualNum=0;VisualNum<ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.Num();VisualNum++)
+                    {
+                        if(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.IsValidIndex(VisualNum))
+                        {
+                           auto VisualMeshPath= ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals[VisualNum]->Geometry->Mesh->GetPathName();
+                           UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Link %s has the following MeshPath %s"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),*VisualMeshPath);
+
+                        }
+                    }
+//                    for(int CollisionNum=0;ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Collisions.Num();CollisionNum++)
+//                    {
+
+//                    }
+                }//End For Links
+            }//End for Models
+
+
+
+
+
+
+            //Spawn with the DataAsset
+//            //DEBUG
+//            FGraphEventRef Task2=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+//            {
+//                ServiceSuccess = RobotFactory->SpawnRobotFromAsset(World,ToSpawnDataAsset);
+
+//            FString AssetPath = FString("../../../Playground/Content/Dev/");
+//            FString PackagePath = FString("/Game/Dev/TestingAsset");
+//            UPackage *Package = CreatePackage(nullptr, *PackagePath);
+//            USDFDataAsset* TestAsset = NewObject<USDFDataAsset>(Package, USDFDataAsset::StaticClass(), *FString("TestingAsset"), EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
+//            TestAsset=ToSpawnDataAsset;
+
+
+
+//            },TStatId(),nullptr,ENamedThreads::GameThread);
+
+//            //wait for code above to complete (Spawning in GameThread)
+//            FTaskGraphInterface::Get().WaitUntilTaskCompletes(Task2);
+//            //END DEBUG
+
+
+            //Execute on game Thread
+            double start=FPlatformTime::Seconds();
+            FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+            {
+                ServiceSuccess = RobotFactory->SpawnRobotFromAsset(World,ToSpawnDataAsset);
+            },TStatId(),nullptr,ENamedThreads::GameThread);
+
+            //wait for code above to complete (Spawning in GameThread)
+            FTaskGraphInterface::Get().WaitUntilTaskCompletes(Task);
+            double end= FPlatformTime::Seconds();
+            UE_LOG(LogTemp, Display, TEXT("SpawnRobot executed in %f seconds."), end-start);
+            return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(/*Id,FinalActorName,ServiceSuccess*/));
+        }
+
     }
     else
     {
@@ -72,33 +150,30 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
 
 
             UE_LOG(LogTemp, Warning, TEXT("[%s]: We interesting location short %s"), *FString(__FUNCTION__),*Loc);
-            FString Valeera=TEXT("SDFDataAsset'/Game/" + Loc +"."+Modelname+ "'");
-            UE_LOG(LogTemp, Warning, TEXT("[%s]: Closes to AssetModifier %s"), *FString(__FUNCTION__),*Valeera);
+            FString PathtoDataAsset=TEXT("SDFDataAsset'/Game/" + Loc +"."+Modelname+ "'");
+            UE_LOG(LogTemp, Warning, TEXT("[%s]: Closes to AssetModifier %s"), *FString(__FUNCTION__),*PathtoDataAsset);
             UE_LOG(LogTemp, Warning, TEXT("[%s]: Should be SDFDataAsset'/Game/Robots/PR2/pr2.pr2'"), *FString(__FUNCTION__));
 //            UObject* PossibleSDFDataAsset= FoundPath.TryLoad();
             FString help="/Game/" + Loc ;
             //Star Spawn from DataAsset from the
-            ARobotFactory::FSpawnRobotParams Params;
-            Params.World=World;
-            Params.DataAssetToSpawn=Valeera;
-            ARobotFactory* RobotFactory = NewObject<ARobotFactory>();
             //Execute on game Thread
             double start=FPlatformTime::Seconds();
             FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
             {
-                ServiceSuccess = RobotFactory->SpawnRobotFromAsset(Params);
+                ServiceSuccess = RobotFactory->SpawnRobotFromAsset(World,PathtoDataAsset);
             },TStatId(),nullptr,ENamedThreads::GameThread);
 
             //wait for code above to complete (Spawning in GameThread)
             FTaskGraphInterface::Get().WaitUntilTaskCompletes(Task);
             double end= FPlatformTime::Seconds();
             UE_LOG(LogTemp, Display, TEXT("SpawnRobot executed in %f seconds."), end-start);
-            MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(Id,FinalActorName,ServiceSuccess);
+            //MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(TEXT("Silvermoon")),TEXT("FinalActorName"),ServiceSuccess);//TodO get final Actor Name
+            return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(/*Id,FinalActorName,ServiceSuccess*/));
 
 
          }//End For (Possible DataAssets)
+        UE_LOG(LogTemp, Display, TEXT("It is done"));
      }//End else (Spawn from DataAsset)
-
     return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(/*Id,FinalActorName,ServiceSuccess*/));
 }
 

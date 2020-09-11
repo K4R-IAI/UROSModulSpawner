@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SDF/SDFDataAsset.h"
 #include "RobotFactory.generated.h"
 
 UCLASS()
@@ -22,6 +23,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+    bool SpawnRobotFromAsset(UWorld* InWorld,USDFDataAsset* InDataAsset);
+    bool SpawnRobotFromAsset(UWorld* InWorld, FString InPath);
 
 struct FSpawnRobotParams
 {

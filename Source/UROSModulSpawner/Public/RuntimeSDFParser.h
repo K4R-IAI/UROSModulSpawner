@@ -21,6 +21,7 @@ public:
     virtual void Clear() override;
     virtual bool IsValidSDF() override;
     virtual USDFDataAsset* ParseToNewDataAsset(UObject* InParent, FName InName, EObjectFlags InFlags)override;
+    virtual USDFDataAsset* ParseToNewDataAsset();
 
 protected:
     virtual void ParseSDF() override ;
@@ -29,8 +30,9 @@ protected:
     virtual void ParseVisual(const FXmlNode* InNode, USDFLink*& OutLink) override;
     virtual void ParseCollision(const FXmlNode* InNode, USDFLink*& OutLink) override;
     virtual void ParseGeometryMesh(const FXmlNode *InNode, USDFGeometry *&OutGeometry, ESDFType Type) override;
+    USDFCollision* CreateVirtualCollision(USDFLink* OutLink);
 
-   void SpawnRobot(FString InMessage);
+    void SpawnRobot(FString InMessage);
 
 //    USDFCollision* CreateVirtualCollision(USDFLink* OutLink);
     UStaticMesh* LoadMesh(ESDFType InType, FString InName);

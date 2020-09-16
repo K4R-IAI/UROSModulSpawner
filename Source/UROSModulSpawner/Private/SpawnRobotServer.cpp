@@ -69,6 +69,7 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
 
         if(ToSpawnDataAsset)
         {
+            int noncount=0;
             //About the Data Asset prints etc
             UE_LOG(LogTemp, Log, TEXT("[%s]: Number of Models %d"), *FString(__FUNCTION__),ToSpawnDataAsset->Models.Num());
             for(int ModelNum=0;ModelNum<ToSpawnDataAsset->Models.Num();ModelNum++)
@@ -83,10 +84,15 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
                         if(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.IsValidIndex(VisualNum))
                         {
                            auto VisualMeshPath= ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals[VisualNum]->Geometry->Mesh->GetPathName();
+                           if(VisualMeshPath=="None")
+                               noncount++;
+
                            UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Link %s has the following MeshPath %s"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),*VisualMeshPath);
 
                         }
                     }
+                    UE_LOG(LogTemp, Log, TEXT("[%s]: numbers of none %d"),*FString(__FUNCTION__),noncount);
+
 //                    for(int CollisionNum=0;ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Collisions.Num();CollisionNum++)
 //                    {
 

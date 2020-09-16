@@ -474,7 +474,7 @@ UStaticMesh* FRuntimeSDFParser::LoadMesh(ESDFType InType, FString InName)
     // FString Path = "";
     ESDFType Type=InType;
     FString Name=InName;
-    if(Name.EndsWith(".fbx"))
+    if(Name.EndsWith(".fbx")||Name.EndsWith(".stl")||Name.EndsWith(".dae"))
     {
         int Last;
         Name.FindLastChar('.',Last);

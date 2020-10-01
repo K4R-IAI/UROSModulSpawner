@@ -101,10 +101,6 @@ bool ARobotFactory::SpawnRobotFromAsset(UWorld* InWorld, FString InPath)
     UWorld* World=InWorld;
     FString AssetToSpawn=InPath;
 
-    UE_LOG(LogTemp, Log, TEXT("Copied path to file: SDFDataAsset'/Game/Robots/PR2/pr2.pr2"));
-    UE_LOG(LogTemp, Log, TEXT("Params.path: %s"),*AssetToSpawn);
-
-
     USDFDataAsset* SDFDataAssetS=Cast<USDFDataAsset>(StaticLoadObject(USDFDataAsset::StaticClass(),NULL,*AssetToSpawn)); //--> Error not in Game Thread...
 
     if(SDFDataAssetS)

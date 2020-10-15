@@ -7,6 +7,8 @@
 #include "SpawnRobot.h"
 //#include "RWCManager.h"
 #include "RobotManager.h"
+//delete RobotFactory?
+#include "SDF/SDFDataAsset.h"
 
 /**
  * This Service should be able to spawn Robot
@@ -25,9 +27,7 @@ protected:
 
 
 private:
-//    From SpawnModelsServer
-//    UStaticMesh* LoadMesh(FString Name, FString StartDir);
-//    UMaterialInterface* LoadMaterial(FString Name, FString StartDir);
+AActor* SpawnRobotFromAsset(UWorld* InWorld,USDFDataAsset* InDataAsset);
 
 
 public:

@@ -173,9 +173,12 @@ AActor* FROSSpawnRobotServer::SpawnRobotFromAsset(UWorld* InWorld,USDFDataAsset*
     FString RobotName= TEXT("Robot")+FGuid::NewGuid().ToString();
     SpawnParams.Name=*RobotName;
     ActortoSpawn = World->SpawnActor<ARModel>(Position,Rotation,SpawnParams);
-
+    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after SpawnActor: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
+    ActortoSpawn->SetRootComponent(nullptr);
+    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after rootComponent=NULL: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
     URModelBuilder* BuildingFacotry= NewObject<URModelBuilder>();
     BuildingFacotry->Load(ModeltoSpawn,ActortoSpawn);
+    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after URModelBuilder->Load: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
 
     return ActortoSpawn;
 }

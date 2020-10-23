@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ROSBridgeSrvServer.h"
-#include "SpawnRobot.h"
+#include "modul_spawner_msgs/srv/SpawnRobot.h"
 //#include "RWCManager.h"
 #include "RobotManager.h"
 //delete RobotFactory?
@@ -34,7 +34,7 @@ public:
     //URWCManager* Controller;
     URobotManager* Controller;
     FROSSpawnRobotServer(FString Namespace, FString Name, UWorld* InWorld, URobotManager* InController) :
-        FROSBridgeSrvServer(Namespace + TEXT("/") + Name, TEXT("world_control_msgs/SpawnRobot"))
+        FROSBridgeSrvServer(Namespace + TEXT("/") + Name, TEXT("modul_spawner_msgs/SpawnRobot"))
     {
         Controller = InController;
         World = InWorld;

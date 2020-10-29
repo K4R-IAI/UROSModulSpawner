@@ -41,7 +41,13 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
 
     FXmlFile* XmlFile= new FXmlFile(InFilename,EConstructMethod::ConstructFromBuffer);
     //Root Node is Version then it should be model
-    check(XmlFile->IsValid())
+//    check(XmlFile->IsValid())
+    if(!XmlFile->IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("[%s] Send XML File was not valid."),*FString(__FUNCTION__));
+        return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(TEXT("NONE"),TEXT("NONE"),false));
+    }
+
     AActor* spawnedActor;
     FString Modelname = XmlFile->GetRootNode()->FindChildNode("model")->GetAttribute("name");
     FString Filename=Modelname+ ".uasset";

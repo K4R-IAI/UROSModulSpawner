@@ -36,8 +36,6 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
         UE_LOG(LogTemp, Log, TEXT("SpawnRobotServer recieved a Message. But in the wrong format. Aborting... "));
         return nullptr;
     }
-    /*ARobotFactory* RobotFactory = NewObject<ARobotFactory>();
-    RobotFactory->SpawnRobot(SpawnRobotRequest->GetName(),World);*/
 
     const FString& InFilename = SpawnRobotRequest->GetName();
 
@@ -60,69 +58,79 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
         UE_LOG(LogTemp, Warning, TEXT("[%s]: Could not find the DataAsset at %s. Trying with runtimeParser"), *FString(__FUNCTION__),*FPaths::ProjectContentDir().Append("Robots"));
         //Need to Parse SDF to get infos to create runtime dataAsset --> Here we can assume Meshes are already there
         //Try the runtime Parser
-
-        FRuntimeSDFParser* RuntimeParser = new FRuntimeSDFParser(InFilename);
-        RuntimeParser->LoadSDF(SpawnRobotRequest->GetName());
-        USDFDataAsset* ToSpawnDataAsset= RuntimeParser->ParseToNewDataAsset();
-
-        if(ToSpawnDataAsset)
+        if(Fm.DirectoryExists(*FPaths::ProjectContentDir().Append("Robots/"+Modelname)))
         {
-            int noncount=0;
-            //About the Data Asset prints etc
-            UE_LOG(LogTemp, Log, TEXT("[%s]: Number of Models %d"), *FString(__FUNCTION__),ToSpawnDataAsset->Models.Num());
-            for(int ModelNum=0;ModelNum<ToSpawnDataAsset->Models.Num();ModelNum++)
+            FRuntimeSDFParser* RuntimeParser = new FRuntimeSDFParser(InFilename);
+            RuntimeParser->LoadSDF(SpawnRobotRequest->GetName());
+            USDFDataAsset* ToSpawnDataAsset= RuntimeParser->ParseToNewDataAsset();
+
+            if(ToSpawnDataAsset)
             {
-                UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %d"), *FString(__FUNCTION__),ModelNum,ToSpawnDataAsset->Models[ModelNum]->Links.Num());
-                for(int LinkNum=0;LinkNum<ToSpawnDataAsset->Models[ModelNum]->Links.Num();LinkNum++)
+                int noncount=0;
+                //About the Data Asset prints etc
+                UE_LOG(LogTemp, Log, TEXT("[%s]: Number of Models %d"), *FString(__FUNCTION__),ToSpawnDataAsset->Models.Num());
+                for(int ModelNum=0;ModelNum<ToSpawnDataAsset->Models.Num();ModelNum++)
                 {
-//                    UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %s has %f Mass (from Interial)"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Inertial->Mass);
-                    UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %s has %d Visuals and %d Collisions "),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.Num(),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Collisions.Num());
-                    for(int VisualNum=0;VisualNum<ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.Num();VisualNum++)
+                    UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %d"), *FString(__FUNCTION__),ModelNum,ToSpawnDataAsset->Models[ModelNum]->Links.Num());
+                    for(int LinkNum=0;LinkNum<ToSpawnDataAsset->Models[ModelNum]->Links.Num();LinkNum++)
                     {
-                        if(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.IsValidIndex(VisualNum))
+    //                    UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %s has %f Mass (from Interial)"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Inertial->Mass);
+                        UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Links %s has %d Visuals and %d Collisions "),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.Num(),ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Collisions.Num());
+                        for(int VisualNum=0;VisualNum<ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.Num();VisualNum++)
                         {
-                           auto VisualMeshPath= ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals[VisualNum]->Geometry->Mesh->GetPathName();
-                           if(VisualMeshPath=="None")
-                               noncount++;
+                            if(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals.IsValidIndex(VisualNum))
+                            {
+                               auto VisualMeshPath= ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Visuals[VisualNum]->Geometry->Mesh->GetPathName();
+                               if(VisualMeshPath=="None")
+                                   noncount++;
 
-//                           UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Link %s has the following MeshPath %s"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),*VisualMeshPath);
+    //                           UE_LOG(LogTemp, Log, TEXT("[%s]: Model Number %d, Link %s has the following MeshPath %s"),*FString(__FUNCTION__),ModelNum,*(ToSpawnDataAsset->Models[ModelNum]->Links[LinkNum]->Name),*VisualMeshPath);
 
+                            }
                         }
-                    }
-                    UE_LOG(LogTemp, Log, TEXT("[%s]: numbers of none %d"),*FString(__FUNCTION__),noncount); // It should be noted that there are some SDF Files where it is possible to have a None and still be able to spawn them
+                        UE_LOG(LogTemp, Log, TEXT("[%s]: numbers of none %d"),*FString(__FUNCTION__),noncount); // It should be noted that there are some SDF Files where it is possible to have a None and still be able to spawn them
 
-                }//End For Links
-            }//End for Models
+                    }//End For Links
+                }//End for Models
 
 
-            //Execute on game Thread
-            double start=FPlatformTime::Seconds();
-            FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-            {
-                spawnedActor=this->SpawnRobotFromAsset(World,ToSpawnDataAsset);
-//                spawnedActor= RobotFactory->SpawnRobotFromAsset(World,ToSpawnDataAsset);
-                if(spawnedActor)
-                {ServiceSuccess=true;}
-                else
-                {ServiceSuccess=false;}
-            },TStatId(),nullptr,ENamedThreads::GameThread);
+                //Execute on game Thread
+                double start=FPlatformTime::Seconds();
+                FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+                {
+                    spawnedActor=this->SpawnRobotFromAsset(World,ToSpawnDataAsset);
+                    if(spawnedActor)
+                    {ServiceSuccess=true;}
+                    else
+                    {ServiceSuccess=false;}
+                },TStatId(),nullptr,ENamedThreads::GameThread);
 
-            //wait for code above to complete (Spawning in GameThread)
-            FTaskGraphInterface::Get().WaitUntilTaskCompletes(Task);
-            double end= FPlatformTime::Seconds();
-            UE_LOG(LogTemp, Display, TEXT("SpawnRobot executed in %f seconds."), end-start);
-            UE_LOG(LogTemp, Display, TEXT("SpawnRobot has the Name %s"), *spawnedActor->GetName());
-            UE_LOG(LogTemp,Display,TEXT("Spawned Robot has the ID %s"),*FString::FromInt(spawnedActor->GetUniqueID()));
-            return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(FString::FromInt(spawnedActor->GetUniqueID()),spawnedActor->GetName(),ServiceSuccess));
+                //wait for code above to complete (Spawning in GameThread)
+                FTaskGraphInterface::Get().WaitUntilTaskCompletes(Task);
+                double end= FPlatformTime::Seconds();
+                UE_LOG(LogTemp, Display, TEXT("SpawnRobot executed in %f seconds."), end-start);
+                UE_LOG(LogTemp, Display, TEXT("SpawnRobot has the Name %s"), *spawnedActor->GetName());
+                UE_LOG(LogTemp,Display,TEXT("Spawned Robot has the ID %s"),*FString::FromInt(spawnedActor->GetUniqueID()));
+                return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(FString::FromInt(spawnedActor->GetUniqueID()),spawnedActor->GetName(),ServiceSuccess));
+            }
+        }//end if Content/Robot/[ModelName] exsits
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("[%s]: Could not find the folder %s Aborting... "),*FString(__FUNCTION__), *FPaths::ProjectContentDir().Append("Robots/"+Modelname));
+            return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(TEXT("NONE"),TEXT("NONE"),false));
         }
 
-    }
+    }//end if FileLocation==0
     else
     {
         //Star Spawn from DataAsset
         for (FString Loc : FileLocations)
         {
-            UE_LOG(LogTemp, Warning, TEXT("[%s]: We found a DataAsset at %s. Trying to spawn it..."), *FString(__FUNCTION__), *Loc);
+            if(!Loc.StartsWith(FPaths::ProjectContentDir().Append("Robots/"+Modelname)))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[%s]: The found DataAsset is not in the %s folder"), *FString(__FUNCTION__), *Modelname);
+            }
+            UE_LOG(LogTemp, Log, TEXT("[%s]: We found a DataAsset at %s. Trying to spawn it..."), *FString(__FUNCTION__), *Loc);
             Loc.RemoveFromStart(FPaths::ProjectContentDir());
             int Last;
             Loc.FindLastChar('.', Last);
@@ -136,8 +144,6 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
             {
                 USDFDataAsset* SDFDataAssetS=Cast<USDFDataAsset>(StaticLoadObject(USDFDataAsset::StaticClass(),NULL,*PathtoDataAsset));
                 spawnedActor=this->SpawnRobotFromAsset(World,SDFDataAssetS);
-//                spawnedActor = RobotFactory->SpawnRobotFromAsset(World,SDFDataAssetS);
-//                spawnedActor = RobotFactory->SpawnRobotFromAsset(World,PathtoDataAsset);
                 if(spawnedActor)
                 {ServiceSuccess=true;}
                 else

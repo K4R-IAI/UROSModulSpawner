@@ -9,10 +9,11 @@
 #include "HAL/FileManagerGeneric.h"
 //#include "URModelBuilder.h"
 //#include "URoboSim/Classes/SDF/SDFDataAsset.h"
-
+#include "Ids.h"
 //delete RobotFactory?
 #include "Physics/RModel.h"
 #include "Factory/RModelBuilder.h"
+#include "Tags.h"
 
 TSharedPtr<FROSBridgeSrv::SrvRequest> FROSSpawnRobotServer::FromJson(TSharedPtr<FJsonObject> JsonObject) const
 {
@@ -38,6 +39,8 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
     }
 
     const FString& InFilename = SpawnRobotRequest->GetName();
+
+    FString Id=SpawnRobotRequest->GetId().IsEmpty() ? FIds::NewGuidInBase64() : SpawnRobotRequest->GetId();
 
     FXmlFile* XmlFile= new FXmlFile(InFilename,EConstructMethod::ConstructFromBuffer);
     //Root Node is Version then it should be model
@@ -104,7 +107,7 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
                 double start=FPlatformTime::Seconds();
                 FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
                 {
-                    spawnedActor=this->SpawnRobotFromAsset(World,ToSpawnDataAsset);
+                    spawnedActor=this->SpawnRobotFromAsset(ToSpawnDataAsset,Id);
                     if(spawnedActor)
                     {ServiceSuccess=true;}
                     else
@@ -117,7 +120,7 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
                 UE_LOG(LogTemp, Display, TEXT("SpawnRobot executed in %f seconds."), end-start);
                 UE_LOG(LogTemp, Display, TEXT("SpawnRobot has the Name %s"), *spawnedActor->GetName());
                 UE_LOG(LogTemp,Display,TEXT("Spawned Robot has the ID %s"),*FString::FromInt(spawnedActor->GetUniqueID()));
-                return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(FString::FromInt(spawnedActor->GetUniqueID()),spawnedActor->GetName(),ServiceSuccess));
+                return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(Id,spawnedActor->GetName(),ServiceSuccess));
             }
         }//end if Content/Robot/[ModelName] exsits
         else
@@ -149,7 +152,7 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
             FGraphEventRef Task=FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
             {
                 USDFDataAsset* SDFDataAssetS=Cast<USDFDataAsset>(StaticLoadObject(USDFDataAsset::StaticClass(),NULL,*PathtoDataAsset));
-                spawnedActor=this->SpawnRobotFromAsset(World,SDFDataAssetS);
+                spawnedActor=this->SpawnRobotFromAsset(SDFDataAssetS,Id);
                 if(spawnedActor)
                 {ServiceSuccess=true;}
                 else
@@ -164,18 +167,17 @@ TSharedPtr<FROSBridgeSrv::SrvResponse> FROSSpawnRobotServer::Callback(TSharedPtr
             UE_LOG(LogTemp,Display,TEXT("Spawned Robot has the ID %s"),*FString::FromInt(spawnedActor->GetUniqueID()));
 
 
-            return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(FString::FromInt(spawnedActor->GetUniqueID()),spawnedActor->GetName(),ServiceSuccess));
+            return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(Id,spawnedActor->GetName(),ServiceSuccess));
          }//End For (Possible DataAssets)
      }//End else (Spawn from DataAsset)
     return MakeShareable<FROSBridgeSrv::SrvResponse>(new FROSRobotModelSrv::Response(TEXT("NONE"),TEXT("NONE"),false));
 }
 
-AActor* FROSSpawnRobotServer::SpawnRobotFromAsset(UWorld* InWorld,USDFDataAsset* InDataAsset)
+AActor* FROSSpawnRobotServer::SpawnRobotFromAsset(USDFDataAsset* InDataAsset, FString InId)
 {
     UE_LOG(LogTemp, Log, TEXT("[%s] RobotFactory starts to work... "),*FString(__FUNCTION__));
-    UWorld* World=InWorld;
     USDFDataAsset* AssetToSpawn=InDataAsset;
-
+    FString Id=InId;
 
     ARModel* ActortoSpawn= NewObject<ARModel>();
     USDFModel* ModeltoSpawn= AssetToSpawn->Models[0]; // There should only be one Model in the DataAsset, if not which one should I spawn?
@@ -185,12 +187,19 @@ AActor* FROSSpawnRobotServer::SpawnRobotFromAsset(UWorld* InWorld,USDFDataAsset*
     FString RobotName= TEXT("Robot")+FGuid::NewGuid().ToString();
     SpawnParams.Name=*RobotName;
     ActortoSpawn = World->SpawnActor<ARModel>(Position,Rotation,SpawnParams);
-    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after SpawnActor: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
+//    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after SpawnActor: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
     ActortoSpawn->SetRootComponent(nullptr);
-    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after rootComponent=NULL: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
+//    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after rootComponent=NULL: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
     URModelBuilder* BuildingFacotry= NewObject<URModelBuilder>();
     BuildingFacotry->Load(ModeltoSpawn,ActortoSpawn);
-    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after URModelBuilder->Load: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
+//    UE_LOG(LogTemp, Log, TEXT("[%s] ActortoSpawnLocation after URModelBuilder->Load: [%f,%f,%f] "),*FString(__FUNCTION__),ActortoSpawn->GetActorLocation().X,ActortoSpawn->GetActorLocation().Y,ActortoSpawn->GetActorLocation().Z);
+
+    FTags::AddKeyValuePair(
+        ActortoSpawn,
+        TEXT("SemLog"),
+        TEXT("id"),
+        Id);
+
 
     return ActortoSpawn;
 }

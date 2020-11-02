@@ -22,12 +22,19 @@ public:
     {
     private:
         FString Name;
+        FString Id;
 
     public:
         Request() {}
-        Request(FString InName)
+        Request(FString InName,FString InId)
         {
             Name=InName;
+            Id=InId;
+        }
+
+        FString GetId()
+        {
+            return Id;
         }
 
         FString GetName()
@@ -38,6 +45,7 @@ public:
         virtual void FromJson(TSharedPtr<FJsonObject> JsonObject) override
         {
             Name=JsonObject->GetStringField("name");
+            Id=JsonObject->GetStringField("id");
         }
 
         static Request GetFromJson(TSharedPtr<FJsonObject> JsonObject)

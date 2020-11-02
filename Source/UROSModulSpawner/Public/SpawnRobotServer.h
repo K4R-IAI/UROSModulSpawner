@@ -27,7 +27,7 @@ protected:
 
 
 private:
-AActor* SpawnRobotFromAsset(UWorld* InWorld,USDFDataAsset* InDataAsset);
+AActor* SpawnRobotFromAsset(USDFDataAsset* InDataAsset, FString InId);
 
 
 public:
@@ -39,7 +39,6 @@ public:
         Controller = InController;
         World = InWorld;
     }
-
 
     TSharedPtr<FROSBridgeSrv::SrvRequest> FromJson(TSharedPtr<FJsonObject> JsonObject) const override;
 
